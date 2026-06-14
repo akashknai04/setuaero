@@ -1,5 +1,5 @@
 # Lunar Ice Pathfinder
-### Multi-Sensor Satellite Data Fusion, Physics-Informed ML, and Terramechanics-Aware Traverse Planner for Lunar South Pole Missions
+### Multi-Sensor Satellite Data Fusion, Physics-Informed ML, and Terramechanics-Aware Rover Traverse Planner for Lunar South Pole Missions
 
 ---
 
@@ -20,7 +20,7 @@ However, landing and pathfinding in these polar terrains present major challenge
 During development, we faced critical data, ML, and systems engineering challenges. Below is how we resolved each of them:
 
 ### Challenge 1: Raw Polar Radar Data is Not ML-Ready
-* **The Problem**: Raw Chandrayaan-2 DFSAR and Mini-RF radar data are distributed in complex, multi-gigabyte PDS data records that require expert polarimetric processing. Downloading and parsing these global maps during a 24-48h hackathon is impossible and prone to API failures.
+* **The Problem**: Raw Chandrayaan-2 DFSAR and LRO Mini-RF radar data are distributed in complex, multi-gigabyte PDS data records that require expert polarimetric processing. Downloading and parsing these global maps during a 24-48h hackathon is impossible and prone to API failures.
 * **Our Solution**: We engineered a **Hybrid Data Ingestion Engine** (`data_manager.py`). It searches for real, locally cropped GeoTIFFs (e.g. 1-2MB patches of Shackleton Crater). If they are missing, it falls back to a **3D Crater Digital Twin generator** that mathematically models the crater using radial profile depth equations, 2D fractional Brownian motion (fractal noise) for micro-roughness, and slope shadow approximations. This ensures a fully functional, zero-dependency demo.
 
 ### Challenge 2: Black-Box Neural Networks Lack Credibility
@@ -37,7 +37,70 @@ During development, we faced critical data, ML, and systems engineering challeng
 
 ---
 
-## 3. Advanced Science & Mathematical Formulations
+## ⚙️ 3. Technology Stack Used
+
+Our project operates on a lightweight, highly responsive full-stack architecture optimized for high-performance geospatial calculations and real-time visualization:
+
+### Frontend (User Interface)
+*   **Vite + React**: Client-side application framework ensuring sub-second UI updates and rendering.
+*   **Plotly.js (`react-plotly.js`)**: 
+    *   *3D Surface Plot*: Generates interactive 3D crater topography models, overlaying the rover's A* path along elevation contours.
+    *   *2D heatmaps*: Displays slope hazard and ice distribution grids.
+*   **TailwindCSS & Glassmorphism**: Provides a high-fidelity "Mission Control" visual aesthetic (glow borders, neon overlays, and scanline animations).
+*   **jsPDF**: Generates PDF mission briefing reports locally in the browser.
+*   **canvas-confetti**: Interactive animation triggering when the rover path solves successfully.
+
+### Backend (Analytical API Engine)
+*   **Python 3**: Core language used for pathfinding, ML training, and geospatial processing.
+*   **FastAPI**: Asynchronous web server exposing endpoints with minimal latency and full CORS configuration.
+*   **NumPy**: Executes matrix calculations and downsamples topographic grids.
+*   **scikit-learn**: Core ML package used to train the Random Forest Classifier on the fly.
+*   **rasterio**: Ingests real georeferenced GeoTIFF data products (LOLA elevation and S/L-band radar CPR maps).
+
+---
+
+## 🤖 4. The AI / Machine Learning Engine (How It Works)
+
+To bypass the lack of lunar ground-truth labels, the project implements a **Physics-Informed Machine Learning (PIML)** pipeline in [`backend/ml_engine.py`](file:///c:/Users/sweth/OneDrive/Desktop/asking%20knows/backend/ml_engine.py):
+
+```
++-------------------------------------------------------------+
+|               Raw Gridded Sensor Ingestion                  |
+|        (Elevation, Slope, Illumination, CPR, Temp)          |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+|                 Physics-Informed Labeling                   |
+|        y = 1 if (CPR > 1.0 AND Temp < 110K), else y = 0      |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+|                 Topographic Training Features               |
+|      X = [Elevation, Slope, Illumination, Local Roughness]   |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+|              Random Forest Classifier (sklearn)             |
+|           rf.fit(X, y) -- Training completes in <0.1s       |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+|           Explainable AI: Feature Importances Map            |
+|       Shows % contribution of Slope vs. Roughness in UI     |
++-------------------------------------------------------------+
+```
+
+### Why this beats Deep Learning in space applications:
+*   **Anti-Overfitting**: Deep networks like U-Nets memorize grids when trained on small datasets, yielding fake predictions. Random Forest operates on pixel tables, preventing spatial overfitting.
+*   **Explainability**: Traditional neural networks are black boxes. Our Random Forest model computes feature importances in real-time, displaying how heavily the model relied on parameters like slope or roughness.
+
+---
+
+## 5. Advanced Science & Mathematical Formulations
 
 ### A. Radar Backscatter & Ice Decoupling (CPR Physics)
 The Circular Polarization Ratio (CPR) is the ratio of same-circular (SC) to opposite-circular (OC) backscattered power:
@@ -72,7 +135,7 @@ $$\text{Transition Cost} (A \to B) = \text{Distance} \times \left( P_{\text{base
 
 ---
 
-## 4. System Architecture & Data Flow
+## 6. System Architecture & Data Flow
 
 ```
 +---------------------------------------------------------------------------------+
@@ -116,7 +179,7 @@ asking knows/
 
 ---
 
-## 5. Setup & Running Locally
+## 7. Setup & Running Locally
 
 ### Prerequisites
 Ensure you have **Python 3.10+** and **Node.js 18+** installed.
@@ -144,14 +207,3 @@ Ensure you have **Python 3.10+** and **Node.js 18+** installed.
    npm run dev
    ```
 3. Open your browser to [http://localhost:3000](http://localhost:3000).
-
----
-
-## 6. Deployment
-
-### Web Deployment (Vercel)
-The project includes a `vercel.json` file. To deploy:
-1. Push your repository to GitHub.
-2. Import the repository on **Vercel**.
-3. In Environment Variables, add `VITE_API_URL` pointing to your deployed API server (e.g., hosted on Render or Railway).
-4. Vercel will automatically compile the React frontend.
