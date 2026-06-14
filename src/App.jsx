@@ -15,6 +15,8 @@ import {
 import Plot from 'react-plotly.js';
 import { jsPDF } from 'jspdf';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 // Fallback metadata if API fails or is loading
 const CRATERS_META = [
   {
@@ -108,7 +110,7 @@ export default function App() {
 
   const fetchCraters = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/craters');
+      const response = await fetch(`${API_BASE_URL}/api/craters`);
       if (response.ok) {
         const data = await response.json();
         setCraters(data);
@@ -122,7 +124,7 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/terrain/${craterId}?grid_size=120`);
+      const response = await fetch(`${API_BASE_URL}/api/terrain/${craterId}?grid_size=120`);
       if (!response.ok) {
         throw new Error(`Failed to fetch terrain: ${response.statusText}`);
       }
@@ -171,7 +173,7 @@ export default function App() {
     setRouteMetrics(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/plan-path', {
+      const response = await fetch(`${API_BASE_URL}/api/plan-path`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
