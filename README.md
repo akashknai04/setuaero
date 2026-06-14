@@ -15,7 +15,29 @@ However, landing and pathfinding in these polar terrains present major challenge
 
 ---
 
-## 2. Advanced Science & Mathematical Formulations
+## 🛠️ 2. Problems Faced & Engineering Solutions (The Engineering Journey)
+
+During development, we faced critical data, ML, and systems engineering challenges. Below is how we resolved each of them:
+
+### Challenge 1: Raw Polar Radar Data is Not ML-Ready
+* **The Problem**: Raw Chandrayaan-2 DFSAR and Mini-RF radar data are distributed in complex, multi-gigabyte PDS data records that require expert polarimetric processing. Downloading and parsing these global maps during a 24-48h hackathon is impossible and prone to API failures.
+* **Our Solution**: We engineered a **Hybrid Data Ingestion Engine** (`data_manager.py`). It searches for real, locally cropped GeoTIFFs (e.g. 1-2MB patches of Shackleton Crater). If they are missing, it falls back to a **3D Crater Digital Twin generator** that mathematically models the crater using radial profile depth equations, 2D fractional Brownian motion (fractal noise) for micro-roughness, and slope shadow approximations. This ensures a fully functional, zero-dependency demo.
+
+### Challenge 2: Black-Box Neural Networks Lack Credibility
+* **The Problem**: Training a U-Net or CNN from scratch for "ice detection" in a hackathon is a red flag. There are no pixel-by-pixel ground truth labels for lunar ice, meaning any deep learning model would be learning to fit random noise.
+* **Our Solution**: We implemented a **Physics-Informed Machine Learning (PIML)** approach (`ml_engine.py`). Instead of a black box, we use physical equations (fusing radar CPR and Diviner thermal stability thresholds) to automatically label pixels as "Ice Candidates" in the backend. We then train a **Random Forest Classifier** in real-time using *only* topographical features (Elevation, Slope, Illumination, and Roughness) as inputs. The AI learns the topographic correlation of cold traps, making it robust and scientifically defensible.
+
+### Challenge 3: Rover Pathfinding was Disconnected from Terrain Safety
+* **The Problem**: Running standard A* or Dijkstra on a generic 2D grid is a computer science homework assignment. It ignores the physical constraints of a lunar rover, such as tipping hazards and solar array charging.
+* **Our Solution**: We built a **Terramechanics-Aware Pathfinder** (`pathfinder.py`). We set a hard slope limit of $15^\circ$ to prevent regolith wheel slippage and roll-overs. Our cost function calculates **uphill elevation work** and rewards the rover with **solar charging offsets** when traversing sunlit crater rims. The system also calculates cumulative battery drain inside the dark PSR and tracks whether the rover has the capacity to return to sunlight.
+
+### Challenge 4: Port/Address Binding Conflicts in Local Run
+* **The Problem**: During testing, the backend API returned `404 Not Found` for endpoints because port `8000` was occupied by a stray local loopback process, intercepting API traffic and breaking the React-FastAPI connection.
+* **Our Solution**: We diagnosed the port conflict using network sockets mapping, terminated the stray process, and configured the backend to cleanly bind to port `8000`. We also refactored the frontend (`src/App.jsx`) to dynamically read the base API url using Vite environment variables (`import.meta.env.VITE_API_URL`), making it fully ready for production cloud deployments (like Vercel and Render).
+
+---
+
+## 3. Advanced Science & Mathematical Formulations
 
 ### A. Radar Backscatter & Ice Decoupling (CPR Physics)
 The Circular Polarization Ratio (CPR) is the ratio of same-circular (SC) to opposite-circular (OC) backscattered power:
@@ -50,7 +72,7 @@ $$\text{Transition Cost} (A \to B) = \text{Distance} \times \left( P_{\text{base
 
 ---
 
-## 3. System Architecture & Data Flow
+## 4. System Architecture & Data Flow
 
 ```
 +---------------------------------------------------------------------------------+
@@ -94,7 +116,7 @@ asking knows/
 
 ---
 
-## 4. Setup & Running Locally
+## 5. Setup & Running Locally
 
 ### Prerequisites
 Ensure you have **Python 3.10+** and **Node.js 18+** installed.
@@ -125,7 +147,7 @@ Ensure you have **Python 3.10+** and **Node.js 18+** installed.
 
 ---
 
-## 5. Deployment
+## 6. Deployment
 
 ### Web Deployment (Vercel)
 The project includes a `vercel.json` file. To deploy:
