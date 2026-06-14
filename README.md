@@ -59,48 +59,38 @@ Our project operates on a lightweight, highly responsive full-stack architecture
 
 ---
 
-## 🤖 4. The AI / Machine Learning Engine (How It Works)
+## 🛰️ 4. Satellite Datasets Ingested
 
-To bypass the lack of lunar ground-truth labels, the project implements a **Physics-Informed Machine Learning (PIML)** pipeline in [`backend/ml_engine.py`](file:///c:/Users/sweth/OneDrive/Desktop/asking%20knows/backend/ml_engine.py):
+To maintain geological accuracy, the system is designed to load and parse georeferenced data products from active lunar spacecraft:
 
-```
-+-------------------------------------------------------------+
-|               Raw Gridded Sensor Ingestion                  |
-|        (Elevation, Slope, Illumination, CPR, Temp)          |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-|                 Physics-Informed Labeling                   |
-|        y = 1 if (CPR > 1.0 AND Temp < 110K), else y = 0      |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-|                 Topographic Training Features               |
-|      X = [Elevation, Slope, Illumination, Local Roughness]   |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-|              Random Forest Classifier (sklearn)             |
-|           rf.fit(X, y) -- Training completes in <0.1s       |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-|           Explainable AI: Feature Importances Map            |
-|       Shows % contribution of Slope vs. Roughness in UI     |
-+-------------------------------------------------------------+
-```
-
-### Why this beats Deep Learning in space applications:
-*   **Anti-Overfitting**: Deep networks like U-Nets memorize grids when trained on small datasets, yielding fake predictions. Random Forest operates on pixel tables, preventing spatial overfitting.
-*   **Explainability**: Traditional neural networks are black boxes. Our Random Forest model computes feature importances in real-time, displaying how heavily the model relied on parameters like slope or roughness.
+1. **NASA LRO LOLA DEM (Digital Elevation Model)**:
+   * *Source*: Lunar Orbiter Laser Altimeter gridded data records (`pds-geosciences.wustl.edu`).
+   * *Resolution*: Up to 5 meters/pixel in polar regions.
+   * *Usage*: Ingests raw heights to compute surface slopes ($\theta$) and localized regolith roughness.
+2. **LRO Mini-RF & Chandrayaan-1/2 DFSAR (Circular Polarization Ratio)**:
+   * *Source*: Fully polarimetric synthetic aperture radar mosaics.
+   * *Wavelength*: S-band (12.6 cm) and L-band (24 cm).
+   * *Usage*: Provides Circular Polarization Ratio (CPR) signatures where values $> 1.0$ indicate potential subsurface ice crystalline scattering (CBOE).
+3. **NASA LRO Diviner Lunar Radiometer**:
+   * *Source*: Thermal mapping sensor data grids.
+   * *Usage*: Provides peak surface temperatures. Water ice is only stable in regions with temperatures persistently below $110\text{ K}$ ($-163^\circ\text{C}$).
 
 ---
 
-## 5. Advanced Science & Mathematical Formulations
+## 🤖 5. The AI / Machine Learning Engine (How It Works)
+
+To bypass the complete lack of lunar ground-truth labels, the project implements a **Physics-Informed Machine Learning (PIML)** pipeline in [`backend/ml_engine.py`](file:///c:/Users/sweth/OneDrive/Desktop/asking%20knows/backend/ml_engine.py):
+
+### The 4-Step ML Pipeline:
+1. **Automated Physical Labeling ($y$)**: We generate the labels automatically using physical constraints:
+   $$\text{Label} = 1 \quad \text{if} \quad \text{CPR} \ge 1.0 \;\text{ AND }\; \text{Temperature} \le 110\text{ K} \quad (\text{else } 0)$$
+2. **Topographic Features ($X$)**: To force the classifier to learn the *topographic shape* of cold traps, we train the model using only terrain shape parameters: `Elevation`, `Local Slope`, `Solar Illumination (Shadows)`, and `Roughness` (local standard deviation of height). We exclude CPR and Temperature from features.
+3. **Random Forest Classifier (`scikit-learn`)**: We train a Random Forest model on the fly in the backend (completes in $< 0.1\text{ seconds}$).
+4. **Generalization & Feature Importance**: The model predicts a clean **Ice Probability Map** for the entire grid, smoothing out sensor noise. It also outputs feature importances, showing how heavily the model relied on parameters like slope or roughness.
+
+---
+
+## 6. Advanced Science & Mathematical Formulations
 
 ### A. Radar Backscatter & Ice Decoupling (CPR Physics)
 The Circular Polarization Ratio (CPR) is the ratio of same-circular (SC) to opposite-circular (OC) backscattered power:
@@ -135,7 +125,7 @@ $$\text{Transition Cost} (A \to B) = \text{Distance} \times \left( P_{\text{base
 
 ---
 
-## 6. System Architecture & Data Flow
+## 7. System Architecture & Data Flow
 
 ```
 +---------------------------------------------------------------------------------+
@@ -179,7 +169,7 @@ asking knows/
 
 ---
 
-## 7. Setup & Running Locally
+## 8. Setup & Running Locally
 
 ### Prerequisites
 Ensure you have **Python 3.10+** and **Node.js 18+** installed.
